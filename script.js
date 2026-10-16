@@ -1,4 +1,3 @@
-// Importar módulos de Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 import { 
@@ -11,7 +10,6 @@ import {
     onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// Credenciales de tu proyecto de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyA9h_32RAALDD6_dUnvpQAJGbPO_wiEe0",
     authDomain: "looks-d9510.firebaseapp.com",
@@ -22,7 +20,6 @@ const firebaseConfig = {
     measurementId: "G-5K0JMNRN6M"
 };
 
-// Inicializar Firebase, Analytics y Firestore
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
@@ -30,7 +27,6 @@ const COLLECTION_NAME = "guests";
 
 let guests = [];
 
-// Elementos de Navegación y UI
 const navButtons = document.querySelectorAll('.nav-btn');
 const viewSections = document.querySelectorAll('.view-section');
 const guestsTableBody = document.getElementById('guests-table-body');
@@ -38,7 +34,6 @@ const searchInput = document.getElementById('search-input');
 const statusFilter = document.getElementById('status-filter');
 const appNotification = document.getElementById('app-notification');
 
-// Elementos del Modal Principal
 const modal = document.getElementById('guest-modal');
 const openModalBtn = document.getElementById('open-modal-btn');
 const closeModalBtn = document.getElementById('close-modal-btn');
@@ -54,7 +49,6 @@ const guestOriginInput = document.getElementById('guest-origin');
 const guestStatusInput = document.getElementById('guest-status');
 const statusGroupContainer = document.getElementById('status-group-container');
 
-// Elementos del Modal de Eliminación
 const deleteModal = document.getElementById('delete-modal');
 const closeDeleteModalBtn = document.getElementById('close-delete-modal');
 const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
@@ -62,7 +56,13 @@ const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
 const deleteGuestNameEl = document.getElementById('delete-guest-name');
 let pendingDeleteId = null;
 
-// Modal de Ganador de Ruleta
+// Modal de Escaneo Exitoso
+const scanSuccessModal = document.getElementById('scan-success-modal');
+const closeScanModalBtn = document.getElementById('close-scan-modal-btn');
+const scanGuestName = document.getElementById('scan-guest-name');
+const scanGuestDoc = document.getElementById('scan-guest-doc');
+const scanGuestLetter = document.getElementById('scan-guest-letter');
+
 const winnerModal = document.getElementById('winner-modal');
 const closeWinnerModalBtn = document.getElementById('close-winner-modal');
 const acceptWinnerBtn = document.getElementById('accept-winner-btn');
@@ -71,16 +71,12 @@ const winnerNameEl = document.getElementById('winner-name');
 const winnerDocEl = document.getElementById('winner-doc');
 const winnerOriginEl = document.getElementById('winner-origin');
 
-// Contadores de Métricas
 const presentCountEl = document.getElementById('present-count');
 const absentCountEl = document.getElementById('absent-count');
 
-// Elementos del Lector QR
 const qrInputCode = document.getElementById('qr-input-code');
 const processQrBtn = document.getElementById('process-qr-btn');
-const scannerFeedback = document.getElementById('scanner-feedback');
 
-// Elementos de la Ruleta
 const spinRouletteBtn = document.getElementById('spin-roulette-btn');
 const rouletteNumberEl = document.getElementById('roulette-number');
 
@@ -96,7 +92,6 @@ function showNotification(message, isError = false) {
     }, 4000);
 }
 
-// --- Navegación ---
 navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
         navButtons.forEach(b => b.classList.remove('active'));
@@ -115,7 +110,6 @@ navButtons.forEach(btn => {
     });
 });
 
-// Asignación secuencial estricta: 50 para A, 50 para B, 50 para C
 function getAssignedLetter(index) {
     if (index < 50) return 'A';
     if (index < 100) return 'B';
@@ -187,7 +181,6 @@ function updateMetrics() {
     absentCountEl.textContent = guests.filter(g => g.status === 'Ausente').length;
 }
 
-// --- Sincronización en tiempo real desde Firebase Firestore ---
 function initRealtimeSync() {
     onSnapshot(collection(db, COLLECTION_NAME), (snapshot) => {
         guests = [];
@@ -202,7 +195,6 @@ function initRealtimeSync() {
     });
 }
 
-// --- Control del Modal de Registro ---
 function openModal() { modal.classList.add('active'); }
 function closeModal() {
     modal.classList.remove('active');
@@ -213,7 +205,7 @@ function closeModal() {
 
 openModalBtn.addEventListener('click', () => {
     if (guests.length >= 150) {
-        showNotification('Se ha alcanzado el límite máximo absoluto de 150 registros (50 para A, 50 para B y 50 para C).', true);
+        showNotification('Se ha alcanzado el límite máximo absoluto de 150 registros.', true);
         return;
     }
 
@@ -228,7 +220,6 @@ closeModalBtn.addEventListener('click', closeModal);
 cancelModalBtn.addEventListener('click', closeModal);
 window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-// Guardar o Actualizar en Firebase
 guestForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -239,6 +230,8 @@ guestForm.addEventListener('submit', async (e) => {
     const origin = guestOriginInput.value.trim();
     const status = guestStatusInput.value;
 
+    closeModal(); // Cierre instantáneo del modal al guardar
+
     try {
         if (id) {
             const guestRef = doc(db, COLLECTION_NAME, id);
@@ -247,7 +240,7 @@ guestForm.addEventListener('submit', async (e) => {
         } else {
             const counts = getLetterCounts();
             if (counts.A >= 50 && counts.B >= 50 && counts.C >= 50) {
-                showNotification('Todas las letras (A, B y C) están llenas con 50 registros cada una.', true);
+                showNotification('Todas las filas están llenas.', true);
                 return;
             }
 
@@ -259,19 +252,26 @@ guestForm.addEventListener('submit', async (e) => {
                 status: 'Ausente',
                 createdAt: new Date().toISOString()
             });
-            showNotification('Nuevo invitado guardado en Firebase.');
+            showNotification('Nuevo invitado guardado.');
         }
-        closeModal();
     } catch (error) {
         console.error("Error al guardar en Firebase:", error);
         showNotification("Hubo un error al guardar el registro.", true);
     }
 });
 
-// --- Lector QR ---
 async function processScannedCode(code) {
     const cleanCode = code.trim();
-    const index = guests.findIndex(g => g.doc === cleanCode || g.id === cleanCode || g.name.toLowerCase() === cleanCode.toLowerCase());
+    
+    let extractedDoc = cleanCode;
+    if (cleanCode.includes("Cédula:")) {
+        const parts = cleanCode.split("Cédula:");
+        if (parts.length > 1) {
+            extractedDoc = parts[1].split("|")[0].trim();
+        }
+    }
+
+    const index = guests.findIndex(g => g.doc === cleanCode || g.doc === extractedDoc || g.id === cleanCode || g.name.toLowerCase() === cleanCode.toLowerCase());
     
     if (index !== -1) {
         const guest = guests[index];
@@ -281,16 +281,25 @@ async function processScannedCode(code) {
             const guestRef = doc(db, COLLECTION_NAME, guest.id);
             await updateDoc(guestRef, { status: 'Presente' });
 
-            scannerFeedback.style.color = '#34d399';
-            scannerFeedback.textContent = `¡Acceso concedido! ${guest.name} marcado como Presente. ➔ Fila ${assignedLetter} (Orden #${index + 1})`;
+            scanGuestName.textContent = guest.name;
+            scanGuestDoc.textContent = guest.doc;
+            scanGuestLetter.textContent = `Fila ${assignedLetter} (Orden #${index + 1})`;
+            scanSuccessModal.classList.add('active');
         } catch (error) {
             console.error("Error al actualizar asistencia:", error);
+            showNotification('Error al actualizar la asistencia en la base de datos.', true);
         }
     } else {
-        scannerFeedback.style.color = '#f87171';
-        scannerFeedback.textContent = `Código detectado ("${cleanCode}"), pero no se encuentra registrado.`;
+        showNotification(`Código "${cleanCode}" no registrado en la base de datos.`, true);
     }
 }
+
+closeScanModalBtn.addEventListener('click', () => {
+    scanSuccessModal.classList.remove('active');
+});
+window.addEventListener('click', (e) => {
+    if (e.target === scanSuccessModal) scanSuccessModal.classList.remove('active');
+});
 
 function initCameraScanner() {
     if (html5QrCodeScanner) return;
@@ -318,8 +327,7 @@ function stopCameraScanner() {
 processQrBtn.addEventListener('click', () => {
     const code = qrInputCode.value.trim();
     if (!code) {
-        scannerFeedback.style.color = '#f87171';
-        scannerFeedback.textContent = 'Por favor ingresa un código.';
+        showNotification('Por favor ingresa un código.', true);
         return;
     }
     processScannedCode(code);
@@ -330,7 +338,6 @@ qrInputCode.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') processQrBtn.click();
 });
 
-// --- Sorteo / Ruleta ---
 spinRouletteBtn.addEventListener('click', () => {
     const presentGuests = guests.map((g, idx) => ({ ...g, originalIndex: idx }))
                                 .filter(g => g.status === 'Presente');
@@ -373,7 +380,6 @@ closeWinnerModalBtn.addEventListener('click', () => { winnerModal.classList.remo
 acceptWinnerBtn.addEventListener('click', () => { winnerModal.classList.remove('active'); });
 window.addEventListener('click', (e) => { if (e.target === winnerModal) winnerModal.classList.remove('active'); });
 
-// --- Edición y Eliminación en Firebase ---
 window.openEditModal = function(id) {
     const guest = guests.find(g => g.id === id);
     if (!guest) return;
@@ -413,11 +419,13 @@ confirmDeleteBtn.addEventListener('click', async () => {
 
     const guestToDelete = guests.find(g => g.id === pendingDeleteId);
     const guestName = guestToDelete ? guestToDelete.name : 'Registro';
+    const idToDelete = pendingDeleteId;
+
+    closeDeleteModal(); // Cerramos el modal primero de forma instantánea
 
     try {
-        await deleteDoc(doc(db, COLLECTION_NAME, pendingDeleteId));
-        closeDeleteModal();
-        showNotification(`Se ha eliminado correctamente a ${guestName} de Firebase.`);
+        await deleteDoc(doc(db, COLLECTION_NAME, idToDelete));
+        showNotification(`Se ha eliminado correctamente a ${guestName}.`);
     } catch (error) {
         console.error("Error al eliminar de Firebase:", error);
         showNotification("No se pudo eliminar el registro.", true);
@@ -427,5 +435,4 @@ confirmDeleteBtn.addEventListener('click', async () => {
 searchInput.addEventListener('input', renderGuests);
 statusFilter.addEventListener('change', renderGuests);
 
-// Iniciar sincronización en tiempo real
 initRealtimeSync();

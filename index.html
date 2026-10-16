@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Looks Lista</title>
-    <!-- Estilos CSS -->
     <link rel="stylesheet" href="style.css">
-    <!-- Iconos de FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Librería para el Lector de QR por Cámara -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <link rel="icon" type="image/png" href="looks.png">
 </head>
 <body>
 
     <div class="app-layout">
-        <!-- Barra Lateral (Sidebar) -->
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <div class="logo-circle">
@@ -38,10 +35,8 @@
             </nav>
         </aside>
 
-        <!-- Contenido Principal -->
         <main class="main-content">
             
-            <!-- Vista de Dashboard -->
             <section id="dashboard-view" class="view-section active">
                 <div class="content-header">
                     <h1>Panel General</h1>
@@ -61,7 +56,6 @@
                     </div>
                 </div>
 
-                <!-- Notificación flotante -->
                 <div id="app-notification" class="app-notification" style="display: none;"></div>
 
                 <div class="table-container">
@@ -78,14 +72,11 @@
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="guests-table-body">
-                            <!-- Dinámico -->
-                        </tbody>
+                        <tbody id="guests-table-body"></tbody>
                     </table>
                 </div>
             </section>
 
-            <!-- Vista de Lector QR -->
             <section id="scanner-view" class="view-section">
                 <div class="content-header">
                     <h1>Lector de Código QR</h1>
@@ -107,7 +98,6 @@
                 </div>
             </section>
 
-            <!-- Vista de Métricas -->
             <section id="metrics-view" class="view-section">
                 <div class="content-header">
                     <h1>Métricas y Asistencia</h1>
@@ -115,18 +105,14 @@
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon bg-green">
-                            <i class="fa-solid fa-user-check"></i>
-                        </div>
+                        <div class="stat-icon bg-green"><i class="fa-solid fa-user-check"></i></div>
                         <div>
                             <p>Presentes</p>
                             <h3 id="present-count">0</h3>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon bg-red">
-                            <i class="fa-solid fa-user-xmark"></i>
-                        </div>
+                        <div class="stat-icon bg-red"><i class="fa-solid fa-user-xmark"></i></div>
                         <div>
                             <p>Ausentes</p>
                             <h3 id="absent-count">0</h3>
@@ -135,7 +121,6 @@
                 </div>
             </section>
 
-            <!-- Vista de Ruleta / Sorteo -->
             <section id="roulette-view" class="view-section">
                 <div class="content-header">
                     <h1>Ruleta de Sorteo (Solo Asistentes)</h1>
@@ -151,7 +136,6 @@
                 </div>
             </section>
 
-            <!-- Botón flotante para agregar nuevo registro -->
             <button class="btn-floating-add" id="open-modal-btn">
                 <i class="fa-solid fa-plus"></i> Nuevo Registro
             </button>
@@ -218,6 +202,22 @@
         </div>
     </div>
 
+    <!-- Modal de Resultado de Escaneo Exitoso -->
+    <div class="modal" id="scan-success-modal">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; background: rgba(52, 211, 153, 0.2); border-bottom: 1px solid #34d399;">
+                <h3 style="color: #34d399;"><i class="fa-solid fa-circle-check"></i> ¡Acceso Concedido!</h3>
+            </div>
+            <div style="padding: 25px;">
+                <h2 id="scan-guest-name" style="font-size: 1.3rem; color: #fff; margin-bottom: 10px;">Nombre del Invitado</h2>
+                <p style="color: var(--text-muted); margin-bottom: 6px;">Cédula: <strong id="scan-guest-doc" style="color: #fff;"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 6px;">Ubicación: <strong id="scan-guest-letter" style="color: #34d399; font-size: 1.1rem;"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Estado: <strong style="color: #34d399;">Presente</strong></p>
+                <button class="btn btn-primary" id="close-scan-modal-btn" style="width: 100%; justify-content: center; background-color: #059669;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal de Resultado del Sorteo -->
     <div class="modal" id="winner-modal">
         <div class="modal-content winner-modal-content">
@@ -235,7 +235,6 @@
         </div>
     </div>
 
-    <!-- Script principal como Módulo de Firebase -->
     <script type="module" src="script.js"></script>
 </body>
 </html>
