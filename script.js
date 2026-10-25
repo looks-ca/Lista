@@ -1,11 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 import { 
     getFirestore, 
     collection, 
     addDoc, 
-    getDocs,
-    doc,
-    updateDoc
+    updateDoc, 
+    deleteDoc, 
+    doc, 
+    onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -19,301 +21,418 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
 const COLLECTION_NAME = "guests";
 
-// Referencias del DOM
-const tabLoginBtn = document.getElementById('tab-login-btn');
-const tabRegisterBtn = document.getElementById('tab-register-btn');
-const tabButtonsContainer = document.querySelector('.tab-buttons');
-const notification = document.getElementById('auth-notification');
+let guests = [];
 
-const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
-const recoverStep1 = document.getElementById('recover-step1');
-const recoverStep2 = document.getElementById('recover-step2');
-const recoverStep3 = document.getElementById('recover-step3');
+const navButtons = document.querySelectorAll('.nav-btn');
+const viewSections = document.querySelectorAll('.view-section');
+const guestsTableBody = document.getElementById('guests-table-body');
+const searchInput = document.getElementById('search-input');
+const statusFilter = document.getElementById('status-filter');
+const appNotification = document.getElementById('app-notification');
 
-const authView = document.getElementById('auth-view');
-const qrView = document.getElementById('qr-view');
-const userDisplayName = document.getElementById('user-display-name');
-const badgeDoc = document.getElementById('badge-doc');
-const badgeOrigin = document.getElementById('badge-origin');
-const badgeStatus = document.getElementById('badge-status');
-const qrcodeContainer = document.getElementById('qrcode');
-const logoutBtn = document.getElementById('logout-btn');
-const welcomeMessage = document.getElementById('welcome-message');
+const modal = document.getElementById('guest-modal');
+const openModalBtn = document.getElementById('open-modal-btn');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const cancelModalBtn = document.getElementById('cancel-modal-btn');
+const guestForm = document.getElementById('guest-form');
+const modalTitle = document.getElementById('modal-title');
 
-let currentUserDocId = null; 
-let qrInstance = null;
-let recoveryUserId = null; // Para guardar el ID temporal al recuperar clave
+const guestIdInput = document.getElementById('guest-id');
+const guestNameInput = document.getElementById('guest-name');
+const guestDocInput = document.getElementById('guest-doc');
+const guestPhoneInput = document.getElementById('guest-phone');
+const guestOriginInput = document.getElementById('guest-origin');
+const guestStatusInput = document.getElementById('guest-status');
+const statusGroupContainer = document.getElementById('status-group-container');
 
-// Función de notificaciones
+const deleteModal = document.getElementById('delete-modal');
+const closeDeleteModalBtn = document.getElementById('close-delete-modal');
+const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+const deleteGuestNameEl = document.getElementById('delete-guest-name');
+let pendingDeleteId = null;
+
+// Modal de Escaneo Exitoso
+const scanSuccessModal = document.getElementById('scan-success-modal');
+const closeScanModalBtn = document.getElementById('close-scan-modal-btn');
+const scanGuestName = document.getElementById('scan-guest-name');
+const scanGuestDoc = document.getElementById('scan-guest-doc');
+const scanGuestLetter = document.getElementById('scan-guest-letter');
+
+const winnerModal = document.getElementById('winner-modal');
+const closeWinnerModalBtn = document.getElementById('close-winner-modal');
+const acceptWinnerBtn = document.getElementById('accept-winner-btn');
+const winnerNumberEl = document.getElementById('winner-number');
+const winnerNameEl = document.getElementById('winner-name');
+const winnerDocEl = document.getElementById('winner-doc');
+const winnerOriginEl = document.getElementById('winner-origin');
+
+const presentCountEl = document.getElementById('present-count');
+const absentCountEl = document.getElementById('absent-count');
+
+const qrInputCode = document.getElementById('qr-input-code');
+const processQrBtn = document.getElementById('process-qr-btn');
+
+const spinRouletteBtn = document.getElementById('spin-roulette-btn');
+const rouletteNumberEl = document.getElementById('roulette-number');
+
+let html5QrCodeScanner = null;
+
 function showNotification(message, isError = false) {
-    notification.textContent = message;
-    notification.style.display = 'flex';
-    notification.style.backgroundColor = isError ? 'rgba(239, 68, 68, 0.2)' : 'rgba(52, 211, 153, 0.2)';
-    notification.style.border = `1px solid ${isError ? '#ef4444' : '#34d399'}`;
-    notification.style.color = isError ? '#f87171' : '#34d399';
-
+    appNotification.innerHTML = `<i class="fa-solid ${isError ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i> ${message}`;
+    appNotification.style.display = 'flex';
+    appNotification.style.borderColor = isError ? '#ef4444' : 'var(--border-color)';
+    
     setTimeout(() => {
-        notification.style.display = 'none';
-    }, 3500);
+        appNotification.style.display = 'none';
+    }, 4000);
 }
 
-// Cambiar entre formularios principales
-function switchForm(formToShow) {
-    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-    formToShow.classList.add('active');
-}
-
-tabLoginBtn.addEventListener('click', () => {
-    tabLoginBtn.classList.add('active');
-    tabRegisterBtn.classList.remove('active');
-    tabButtonsContainer.style.display = 'flex';
-    switchForm(loginForm);
-});
-
-tabRegisterBtn.addEventListener('click', () => {
-    tabRegisterBtn.classList.add('active');
-    tabLoginBtn.classList.remove('active');
-    tabButtonsContainer.style.display = 'flex';
-    switchForm(registerForm);
-});
-
-// Botones de "Volver" en los menús de recuperación
-document.querySelectorAll('.btn-back-login').forEach(btn => {
+navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-        tabLoginBtn.click();
+        navButtons.forEach(b => b.classList.remove('active'));
+        viewSections.forEach(s => s.classList.remove('active'));
+
+        btn.classList.add('active');
+        const targetId = btn.getAttribute('data-target');
+        const targetView = document.getElementById(targetId);
+        if (targetView) targetView.classList.add('active');
+
+        if (targetId === 'scanner-view') {
+            initCameraScanner();
+        } else {
+            stopCameraScanner();
+        }
     });
 });
 
-// Navegar a Recuperar Contraseña
-document.getElementById('btn-forgot-password').addEventListener('click', () => {
-    tabButtonsContainer.style.display = 'none'; // Ocultar pestañas al recuperar
-    switchForm(recoverStep1);
-});
+function getAssignedLetter(index) {
+    if (index < 50) return 'A';
+    if (index < 100) return 'B';
+    return 'C';
+}
 
-// REGISTRO DE USUARIO
-registerForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('reg-name').value.trim();
-    const email = document.getElementById('reg-email').value.trim().toLowerCase();
-    
-    // Concatenar Selectores con Inputs
-    const docType = document.getElementById('reg-doc-type').value;
-    const docNumber = document.getElementById('reg-doc').value.trim();
-    const fullDoc = docType + docNumber;
+function getLetterCounts() {
+    let counts = { A: 0, B: 0, C: 0 };
+    guests.forEach((_, index) => {
+        const letter = getAssignedLetter(index);
+        if (counts[letter] !== undefined) counts[letter]++;
+    });
+    return counts;
+}
 
-    const phoneCode = document.getElementById('reg-phone-code').value;
-    const phoneNumber = document.getElementById('reg-phone').value.trim();
-    const fullPhone = phoneCode + phoneNumber;
+function renderGuests() {
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const filterStatus = statusFilter.value;
 
-    const origin = document.getElementById('reg-origin').value;
-    const password = document.getElementById('reg-password').value.trim();
+    guestsTableBody.innerHTML = '';
 
-    try {
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        let exists = false;
-        querySnapshot.forEach((docSnap) => {
-            if (docSnap.data().doc === fullDoc || docSnap.data().email === email) {
-                exists = true;
-            }
-        });
+    const filteredGuests = guests.map((guest, originalIndex) => ({ ...guest, originalIndex })).filter(item => {
+        const assignedLetter = getAssignedLetter(item.originalIndex).toLowerCase();
+        const originText = (item.origin || '').toLowerCase();
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm) || 
+                              item.doc.toLowerCase().includes(searchTerm) || 
+                              originText.includes(searchTerm) ||
+                              assignedLetter === searchTerm;
+        const matchesStatus = filterStatus === '' || item.status === filterStatus;
+        return matchesSearch && matchesStatus;
+    });
 
-        if (exists) {
-            showNotification("Ya existe un registro con esta cédula o correo.", true);
-            return;
-        }
-
-        await addDoc(collection(db, COLLECTION_NAME), {
-            name,
-            email,
-            doc: fullDoc,
-            phone: fullPhone,
-            origin,
-            password,
-            status: "Ausente",
-            recoveryCode: null,
-            createdAt: new Date().toISOString()
-        });
-
-        registerForm.reset();
-        tabLoginBtn.click();
-        showNotification("¡Registrado con éxito! Ya puedes iniciar sesión.");
-    } catch (error) {
-        console.error("Error al registrar:", error);
-        showNotification("Hubo un error al registrar en la base de datos.", true);
+    if (filteredGuests.length === 0) {
+        guestsTableBody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center">No se encontraron registros en Firebase</td>
+            </tr>
+        `;
+        return;
     }
+
+    filteredGuests.forEach((guest) => {
+        const index = guest.originalIndex;
+        const letter = getAssignedLetter(index);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="row-number">#${index + 1}</td>
+            <td><span class="letter-badge letter-${letter}">${letter}</span></td>
+            <td>${guest.name}</td>
+            <td>${guest.doc}</td>
+            <td>${guest.phone || 'N/A'}</td>
+            <td>${guest.origin || 'N/A'}</td>
+            <td><span class="status-badge badge-${guest.status}">${guest.status}</span></td>
+            <td class="text-center">
+                <button class="action-icon edit" onclick="window.openEditModal('${guest.id}')" title="Editar">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button class="action-icon delete" onclick="window.promptDeleteGuest('${guest.id}')" title="Eliminar">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        `;
+        guestsTableBody.appendChild(tr);
+    });
+}
+
+function updateMetrics() {
+    presentCountEl.textContent = guests.filter(g => g.status === 'Presente').length;
+    absentCountEl.textContent = guests.filter(g => g.status === 'Ausente').length;
+}
+
+function initRealtimeSync() {
+    onSnapshot(collection(db, COLLECTION_NAME), (snapshot) => {
+        guests = [];
+        snapshot.forEach((docSnap) => {
+            guests.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        renderGuests();
+        updateMetrics();
+    }, (error) => {
+        console.error("Error al sincronizar con Firestore:", error);
+        showNotification("Error al conectar con la base de datos.", true);
+    });
+}
+
+function openModal() { modal.classList.add('active'); }
+function closeModal() {
+    modal.classList.remove('active');
+    guestForm.reset();
+    guestIdInput.value = '';
+    modalTitle.textContent = 'Nuevo Registro';
+}
+
+openModalBtn.addEventListener('click', () => {
+    if (guests.length >= 150) {
+        showNotification('Se ha alcanzado el límite máximo absoluto de 150 registros.', true);
+        return;
+    }
+
+    modalTitle.textContent = 'Nuevo Registro';
+    guestForm.reset();
+    guestIdInput.value = '';
+    statusGroupContainer.style.display = 'none';
+    openModal();
 });
 
-// LOGIN DE USUARIO
-loginForm.addEventListener('submit', async (e) => {
+closeModalBtn.addEventListener('click', closeModal);
+cancelModalBtn.addEventListener('click', closeModal);
+window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+guestForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    const docType = document.getElementById('login-doc-type').value;
-    const docNumber = document.getElementById('login-doc').value.trim();
-    const fullDoc = docType + docNumber;
-    
-    const password = document.getElementById('login-password').value.trim();
+
+    const id = guestIdInput.value;
+    const name = guestNameInput.value.trim();
+    const docId = guestDocInput.value.trim();
+    const phone = guestPhoneInput.value.trim();
+    const origin = guestOriginInput.value.trim();
+    const status = guestStatusInput.value;
+
+    closeModal(); // Cierre instantáneo del modal al guardar
 
     try {
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        let foundUser = null;
-        let foundId = null;
-
-        querySnapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            if (data.doc === fullDoc) {
-                foundUser = data;
-                foundId = docSnap.id;
-            }
-        });
-
-        if (!foundUser) {
-            showNotification("No se encontró ningún registro con esta cédula.", true);
+        if (id) {
+            const guestRef = doc(db, COLLECTION_NAME, id);
+            await updateDoc(guestRef, { name, doc: docId, phone, origin, status });
+            showNotification('Registro actualizado en Firebase.');
         } else {
-            if (foundUser.password && foundUser.password !== password) {
-                showNotification("Contraseña incorrecta.", true);
+            const counts = getLetterCounts();
+            if (counts.A >= 50 && counts.B >= 50 && counts.C >= 50) {
+                showNotification('Todas las filas están llenas.', true);
                 return;
             }
 
-            currentUserDocId = foundId;
-            welcomeMessage.textContent = `Bienvenido, ${foundUser.name}`;
-            userDisplayName.textContent = foundUser.name;
-            badgeDoc.textContent = foundUser.doc;
-            badgeOrigin.textContent = foundUser.origin || 'N/A';
-            badgeStatus.textContent = foundUser.status;
-            badgeStatus.className = `status-badge badge-${foundUser.status}`;
-
-            qrcodeContainer.innerHTML = "";
-            qrInstance = new QRCode(qrcodeContainer, {
-                text: foundUser.doc,
-                width: 180,
-                height: 180,
-                colorDark: "#3C005A",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
+            await addDoc(collection(db, COLLECTION_NAME), {
+                name,
+                doc: docId,
+                phone,
+                origin,
+                status: 'Ausente',
+                createdAt: new Date().toISOString()
             });
-
-            authView.style.display = 'none';
-            qrView.style.display = 'block';
+            showNotification('Nuevo invitado guardado.');
         }
     } catch (error) {
-        console.error("Error al iniciar sesión:", error);
-        showNotification("Error al conectar con la base de datos.", true);
+        console.error("Error al guardar en Firebase:", error);
+        showNotification("Hubo un error al guardar el registro.", true);
     }
 });
 
-// PASO 1: ENVIAR CÓDIGO DE RECUPERACIÓN
-recoverStep1.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('rec-email').value.trim().toLowerCase();
-
-    try {
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        let foundUser = null;
-        
-        querySnapshot.forEach((docSnap) => {
-            if (docSnap.data().email === email) {
-                foundUser = docSnap.id;
-            }
-        });
-
-        if (!foundUser) {
-            showNotification("No hay ninguna cuenta con ese correo.", true);
-            return;
+async function processScannedCode(code) {
+    const cleanCode = code.trim();
+    
+    let extractedDoc = cleanCode;
+    if (cleanCode.includes("Cédula:")) {
+        const parts = cleanCode.split("Cédula:");
+        if (parts.length > 1) {
+            extractedDoc = parts[1].split("|")[0].trim();
         }
+    }
 
-        // Generar código aleatorio de 6 dígitos
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Guardar código en la BD
-        const userRef = doc(db, COLLECTION_NAME, foundUser);
-        await updateDoc(userRef, { recoveryCode: code });
-
-        recoveryUserId = foundUser;
-        
-// ENVÍO DE CORREO REAL CON EMAILJS
-        showNotification("Enviando código, por favor espera...");
+    const index = guests.findIndex(g => g.doc === cleanCode || g.doc === extractedDoc || g.id === cleanCode || g.name.toLowerCase() === cleanCode.toLowerCase());
+    
+    if (index !== -1) {
+        const guest = guests[index];
+        const assignedLetter = getAssignedLetter(index);
         
         try {
-            await emailjs.send("service_8imxdcc", "template_2e9s9ex", {
-                to_email: email, // El correo del usuario
-                codigo: code     // El código de 6 dígitos que generamos
-            });
+            const guestRef = doc(db, COLLECTION_NAME, guest.id);
+            await updateDoc(guestRef, { status: 'Presente' });
 
-            showNotification("Código enviado. Revisa tu bandeja de entrada o SPAM.");
-            switchForm(recoverStep2);
+            scanGuestName.textContent = guest.name;
+            scanGuestDoc.textContent = guest.doc;
+            scanGuestLetter.textContent = `Fila ${assignedLetter} (Orden #${index + 1})`;
+            scanSuccessModal.classList.add('active');
+        } catch (error) {
+            console.error("Error al actualizar asistencia:", error);
+            showNotification('Error al actualizar la asistencia en la base de datos.', true);
+        }
+    } else {
+        showNotification(`Código "${cleanCode}" no registrado en la base de datos.`, true);
+    }
+}
+
+closeScanModalBtn.addEventListener('click', () => {
+    scanSuccessModal.classList.remove('active');
+});
+window.addEventListener('click', (e) => {
+    if (e.target === scanSuccessModal) scanSuccessModal.classList.remove('active');
+});
+
+function initCameraScanner() {
+    if (html5QrCodeScanner) return;
+    try {
+        html5QrCodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            false
+        );
+        html5QrCodeScanner.render((decodedText) => {
+            processScannedCode(decodedText);
+        }, (errorMessage) => {});
+    } catch (e) {
+        console.error("Error al iniciar cámara:", e);
+    }
+}
+
+function stopCameraScanner() {
+    if (html5QrCodeScanner) {
+        html5QrCodeScanner.clear().catch(() => {});
+        html5QrCodeScanner = null;
+    }
+}
+
+processQrBtn.addEventListener('click', () => {
+    const code = qrInputCode.value.trim();
+    if (!code) {
+        showNotification('Por favor ingresa un código.', true);
+        return;
+    }
+    processScannedCode(code);
+    qrInputCode.value = '';
+});
+
+qrInputCode.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') processQrBtn.click();
+});
+
+spinRouletteBtn.addEventListener('click', () => {
+    const presentGuests = guests.map((g, idx) => ({ ...g, originalIndex: idx }))
+                                .filter(g => g.status === 'Presente');
+
+    if (presentGuests.length === 0) {
+        rouletteNumberEl.textContent = '0';
+        showNotification('No hay ningún invitado marcado como "Presente" para participar.', true);
+        return;
+    }
+
+    let counter = 0;
+    spinRouletteBtn.disabled = true;
+    
+    const interval = setInterval(() => {
+        const randomTemp = Math.floor(Math.random() * presentGuests.length) + 1;
+        rouletteNumberEl.textContent = randomTemp;
+        counter++;
+
+        if (counter > 15) {
+            clearInterval(interval);
+            const randomIndex = Math.floor(Math.random() * presentGuests.length);
+            const winner = presentGuests[randomIndex];
+
+            rouletteNumberEl.textContent = `#${winner.originalIndex + 1}`;
             
-        } catch (emailError) {
-            console.error("Error al enviar el correo con EmailJS:", emailError);
-            showNotification("Error al enviar el correo. Intenta de nuevo.", true);
-            // Si el correo falla, regresamos el código a null en la BD por seguridad
-            await updateDoc(userRef, { recoveryCode: null });
+            setTimeout(() => {
+                winnerNumberEl.textContent = `#${winner.originalIndex + 1}`;
+                winnerNameEl.textContent = winner.name;
+                winnerDocEl.textContent = winner.doc;
+                winnerOriginEl.textContent = winner.origin || 'N/A';
+                
+                winnerModal.classList.add('active');
+                spinRouletteBtn.disabled = false;
+            }, 250);
         }
-    } catch (error) {
-        console.error("Error:", error);
-        showNotification("Error al procesar la solicitud.", true);
-    }
+    }, 100);
 });
 
-// PASO 2: VERIFICAR CÓDIGO
-recoverStep2.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const inputCode = document.getElementById('rec-code').value.trim();
+closeWinnerModalBtn.addEventListener('click', () => { winnerModal.classList.remove('active'); });
+acceptWinnerBtn.addEventListener('click', () => { winnerModal.classList.remove('active'); });
+window.addEventListener('click', (e) => { if (e.target === winnerModal) winnerModal.classList.remove('active'); });
+
+window.openEditModal = function(id) {
+    const guest = guests.find(g => g.id === id);
+    if (!guest) return;
+
+    modalTitle.textContent = 'Editar Registro';
+    guestIdInput.value = guest.id;
+    guestNameInput.value = guest.name;
+    guestDocInput.value = guest.doc;
+    guestPhoneInput.value = guest.phone;
+    guestOriginInput.value = guest.origin || '';
+    guestStatusInput.value = guest.status;
+
+    statusGroupContainer.style.display = 'block';
+    openModal();
+};
+
+window.promptDeleteGuest = function(id) {
+    const guest = guests.find(g => g.id === id);
+    if (!guest) return;
+
+    pendingDeleteId = id;
+    deleteGuestNameEl.textContent = guest.name;
+    deleteModal.classList.add('active');
+};
+
+const closeDeleteModal = () => {
+    deleteModal.classList.remove('active');
+    pendingDeleteId = null;
+};
+
+closeDeleteModalBtn.addEventListener('click', closeDeleteModal);
+cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+window.addEventListener('click', (e) => { if (e.target === deleteModal) closeDeleteModal(); });
+
+confirmDeleteBtn.addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+
+    const guestToDelete = guests.find(g => g.id === pendingDeleteId);
+    const guestName = guestToDelete ? guestToDelete.name : 'Registro';
+    const idToDelete = pendingDeleteId;
+
+    closeDeleteModal(); // Cerramos el modal primero de forma instantánea
 
     try {
-        const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-        let isValid = false;
-
-        querySnapshot.forEach((docSnap) => {
-            if (docSnap.id === recoveryUserId && docSnap.data().recoveryCode === inputCode) {
-                isValid = true;
-            }
-        });
-
-        if (isValid) {
-            showNotification("Código verificado correctamente.");
-            switchForm(recoverStep3);
-        } else {
-            showNotification("Código incorrecto o expirado.", true);
-        }
+        await deleteDoc(doc(db, COLLECTION_NAME, idToDelete));
+        showNotification(`Se ha eliminado correctamente a ${guestName}.`);
     } catch (error) {
-        showNotification("Error de conexión.", true);
+        console.error("Error al eliminar de Firebase:", error);
+        showNotification("No se pudo eliminar el registro.", true);
     }
 });
 
-// PASO 3: GUARDAR NUEVA CONTRASEÑA
-recoverStep3.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const newPassword = document.getElementById('rec-new-password').value.trim();
+searchInput.addEventListener('input', renderGuests);
+statusFilter.addEventListener('change', renderGuests);
 
-    try {
-        const userRef = doc(db, COLLECTION_NAME, recoveryUserId);
-        
-        // Actualiza clave y elimina el código de seguridad usado
-        await updateDoc(userRef, { 
-            password: newPassword,
-            recoveryCode: null
-        });
-
-        showNotification("Contraseña actualizada con éxito.");
-        recoverStep1.reset();
-        recoverStep2.reset();
-        recoverStep3.reset();
-        recoveryUserId = null;
-        tabLoginBtn.click(); // Vuelve al login normal
-        
-    } catch (error) {
-        showNotification("Error al cambiar la contraseña.", true);
-    }
-});
-
-// CERRAR SESIÓN
-logoutBtn.addEventListener('click', () => {
-    currentUserDocId = null;
-    loginForm.reset();
-    qrView.style.display = 'none';
-    authView.style.display = 'block';
-});
+initRealtimeSync();

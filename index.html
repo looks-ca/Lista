@@ -3,203 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Looks - Acceso</title>
-
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Looks - Acceso">
-    <meta property="og:description" content="Ingresa o regístrate para generar tu pase de asistencia y credencial QR para el evento.">
-    <meta property="og:image" content="https://looks-ca.github.io/Eventos/looks3.png">
-    <meta property="og:url" content="https://looks-ca.github.io/Eventos/">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <title>Looks Lista</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="looks2.png" type="image/png">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script type="text/javascript">
-       (function(){
-          emailjs.init("ZbfQ3LJ2UuauPoXL5"); // Reemplaza esto con tu Public Key de EmailJS
-       })();
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+    <link rel="icon" type="image/png" href="looks.png">
 </head>
 <body>
 
-    <div class="auth-container">
-        <div class="auth-box">
-            
-            <div class="logo-container">
-                <img src="looks.png" alt="Looks Eventos Logo" class="brand-logo" onerror="this.src='https://via.placeholder.com/150x60?text=Looks+Eventos'">
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="logo-circle">
+                    <img src="looks2.png" alt="Lookss Logo">
+                </div>
             </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-target="dashboard-view">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </button>
+                <button class="nav-btn" data-target="scanner-view" id="nav-scanner-btn">
+                    <i class="fa-solid fa-qrcode"></i> Lector QR
+                </button>
+                <button class="nav-btn" data-target="metrics-view">
+                    <i class="fa-solid fa-chart-line"></i> Métricas
+                </button>
+                <button class="nav-btn" data-target="roulette-view">
+                    <i class="fa-solid fa-dice"></i> Sorteo / Ruleta
+                </button>
+            </nav>
+        </aside>
 
-            <div id="auth-view">
-                <div class="tab-buttons">
-                    <button id="tab-login-btn" class="tab-btn active">Iniciar Sesión</button>
-                    <button id="tab-register-btn" class="tab-btn">Registrarse</button>
+        <main class="main-content">
+            
+            <section id="dashboard-view" class="view-section active">
+                <div class="content-header">
+                    <h1>Panel General</h1>
                 </div>
 
-                <div id="auth-notification" class="notification" style="display: none;"></div>
-
-                <!-- FORMULARIO DE LOGIN -->
-                <form id="login-form" class="auth-form active">
-                    <h2>Acceder</h2>
-                    <p>Ingresa tus datos para ver tus credenciales</p>
-                    
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-id-card"></i> Cédula</label>
-                        <div class="input-row">
-                            <select id="login-doc-type">
-                                <option value="V-">V</option>
-                                <option value="J-">J</option>
-                                <option value="E-">E</option>
-                            </select>
-                            <input type="text" id="login-doc" required placeholder="Ej: 25123456">
-                        </div>
+                <div class="actions-bar">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="search-input" placeholder="Buscar por nombre, cédula, procedencia o letra (A, B, C)...">
                     </div>
-
-                    <div class="input-group">
-                        <label for="login-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
-                        <input type="password" id="login-password" required placeholder="Tu contraseña">
-                    </div>
-
-                    <a class="forgot-link" id="btn-forgot-password">¿Se te olvidó la contraseña?</a>
-
-                    <button type="submit" class="submit-btn">Ingresar</button>
-                </form>
-
-                <!-- FORMULARIO DE REGISTRO -->
-                <form id="register-form" class="auth-form">
-                    <h2>Registro</h2>
-                    <p>Registrate para generar tu pase.</p>
-
-                    <div class="input-group">
-                        <label for="reg-name"><i class="fa-solid fa-user"></i> Nombre Completo</label>
-                        <input type="text" id="reg-name" required placeholder="Tu nombre y apellido">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-email"><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
-                        <input type="email" id="reg-email" required placeholder="ejemplo@correo.com">
-                    </div>
-
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-id-card"></i> Cédula</label>
-                        <div class="input-row">
-                            <select id="reg-doc-type">
-                                <option value="V-">V</option>
-                                <option value="J-">J</option>
-                                <option value="E-">E</option>
-                            </select>
-                            <input type="text" id="reg-doc" required placeholder="Ej: 25123456">
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-phone"></i> Teléfono</label>
-                        <div class="input-row">
-                            <select id="reg-phone-code">
-                                <option value="0414-">0414</option>
-                                <option value="0424-">0424</option>
-                                <option value="0412-">0412</option>
-                                <option value="0422-">0422</option>
-                                <option value="0416-">0416</option>
-                                <option value="0426-">0426</option>
-                            </select>
-                            <input type="text" id="reg-phone" required placeholder="1234567">
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="reg-origin"><i class="fa-solid fa-map-location-dot"></i> Procedencia (Estado)</label>
-                        <select id="reg-origin" required class="full-select">
-                            <option value="" disabled selected>Selecciona tu estado...</option>
-                            <option value="Amazonas">Amazonas</option>
-                            <option value="Anzoátegui">Anzoátegui</option>
-                            <option value="Apure">Apure</option>
-                            <option value="Aragua">Aragua</option>
-                            <option value="Barinas">Barinas</option>
-                            <option value="Bolívar">Bolívar</option>
-                            <option value="Carabobo">Carabobo</option>
-                            <option value="Cojedes">Cojedes</option>
-                            <option value="Delta Amacuro">Delta Amacuro</option>
-                            <option value="Distrito Capital">Distrito Capital</option>
-                            <option value="Falcón">Falcón</option>
-                            <option value="Guárico">Guárico</option>
-                            <option value="Lara">Lara</option>
-                            <option value="Mérida">Mérida</option>
-                            <option value="Miranda">Miranda</option>
-                            <option value="Monagas">Monagas</option>
-                            <option value="Nueva Esparta">Nueva Esparta</option>
-                            <option value="Portuguesa">Portuguesa</option>
-                            <option value="Sucre">Sucre</option>
-                            <option value="Táchira">Táchira</option>
-                            <option value="Trujillo">Trujillo</option>
-                            <option value="La Guaira">La Guaira (Vargas)</option>
-                            <option value="Yaracuy">Yaracuy</option>
-                            <option value="Zulia">Zulia</option>
+                    <div class="filter-group">
+                        <select id="status-filter">
+                            <option value="">Todos los estados</option>
+                            <option value="Presente">Presente</option>
+                            <option value="Ausente">Ausente</option>
                         </select>
                     </div>
-
-                    <div class="input-group">
-                        <label for="reg-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
-                        <input type="password" id="reg-password" required placeholder="Crea una contraseña">
-                    </div>
-
-                    <button type="submit" class="submit-btn">Registrarse</button>
-                </form>
-
-                <!-- FLUJO DE RECUPERACIÓN DE CONTRASEÑA -->
-                <form id="recover-step1" class="auth-form">
-                    <h2>Recuperar Contraseña</h2>
-                    <p>Ingresa tu correo registrado para enviarte un código.</p>
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-envelope"></i> Correo Electrónico</label>
-                        <input type="email" id="rec-email" required placeholder="ejemplo@correo.com">
-                    </div>
-                    <button type="submit" class="submit-btn">Enviar Código</button>
-                    <button type="button" class="back-btn btn-back-login">Volver</button>
-                </form>
-
-                <form id="recover-step2" class="auth-form">
-                    <h2>Verificar Código</h2>
-                    <p>Ingresa el código de 6 dígitos que te enviamos.</p>
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-hashtag"></i> Código de Seguridad</label>
-                        <input type="text" id="rec-code" required placeholder="123456" maxlength="6">
-                    </div>
-                    <button type="submit" class="submit-btn">Verificar</button>
-                    <button type="button" class="back-btn btn-back-login">Cancelar</button>
-                </form>
-
-                <form id="recover-step3" class="auth-form">
-                    <h2>Nueva Contraseña</h2>
-                    <p>Crea tu nueva contraseña de acceso.</p>
-                    <div class="input-group">
-                        <label><i class="fa-solid fa-lock"></i> Nueva Contraseña</label>
-                        <input type="password" id="rec-new-password" required placeholder="Nueva contraseña">
-                    </div>
-                    <button type="submit" class="submit-btn">Guardar Contraseña</button>
-                </form>
-
-            </div>
-
-            <div id="qr-view" style="display: none;">
-                <h2 id="welcome-message">Tu Credencial</h2>
-                <p>Presenta este código QR en la entrada del evento.</p>
-
-                <div class="badge-card">
-                    <p><strong>Nombre:</strong> <span id="user-display-name"></span></p>
-                    <p><strong>Cédula:</strong> <span id="badge-doc"></span></p>
-                    <p><strong>Procedencia:</strong> <span id="badge-origin"></span></p>
-                    <p><strong>Estado:</strong> <span id="badge-status" class="status-badge">Ausente</span></p>
-                    
-                    <div class="qr-box">
-                        <div id="qrcode"></div>
-                    </div>
                 </div>
 
-                <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
-            </div>
+                <div id="app-notification" class="app-notification" style="display: none;"></div>
 
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">N°</th>
+                                <th>Fila</th>
+                                <th>Nombre</th>
+                                <th>Cédula / ID</th>
+                                <th>Teléfono</th>
+                                <th>Procedencia</th>
+                                <th>Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guests-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="scanner-view" class="view-section">
+                <div class="content-header">
+                    <h1>Lector de Código QR</h1>
+                </div>
+                <div class="scanner-container">
+                    <div class="scanner-card">
+                        <div id="reader"></div>
+                        <p class="scanner-instructions" style="margin-top: 15px;">Apunta con la cámara al código QR para marcar la asistencia en tiempo real.</p>
+                        
+                        <div class="manual-fallback" style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">O ingresa la cédula o código manualmente:</p>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="qr-input-code" placeholder="Cédula o ID..." style="flex:1; padding: 10px; border-radius: var(--radius); border: 1px solid var(--border-color); background: var(--bg-app); color: var(--text-main);">
+                                <button class="btn btn-primary" id="process-qr-btn">Verificar</button>
+                            </div>
+                        </div>
+                        <div id="scanner-feedback" class="scanner-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="metrics-view" class="view-section">
+                <div class="content-header">
+                    <h1>Métricas y Asistencia</h1>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon bg-green"><i class="fa-solid fa-user-check"></i></div>
+                        <div>
+                            <p>Presentes</p>
+                            <h3 id="present-count">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bg-red"><i class="fa-solid fa-user-xmark"></i></div>
+                        <div>
+                            <p>Ausentes</p>
+                            <h3 id="absent-count">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="roulette-view" class="view-section">
+                <div class="content-header">
+                    <h1>Ruleta de Sorteo (Solo Asistentes)</h1>
+                </div>
+                <div class="roulette-container">
+                    <div class="roulette-box">
+                        <div class="roulette-display" id="roulette-number">?</div>
+                        <p class="roulette-instructions">Participan únicamente los invitados marcados como <strong>Presente</strong>.</p>
+                        <button class="btn btn-primary" id="spin-roulette-btn">
+                            <i class="fa-solid fa-play"></i> Girar / Sortear
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <button class="btn-floating-add" id="open-modal-btn">
+                <i class="fa-solid fa-plus"></i> Nuevo Registro
+            </button>
+
+        </main>
+    </div>
+
+    <!-- Modal para Agregar / Editar Registro -->
+    <div class="modal" id="guest-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Nuevo Registro</h3>
+                <button class="close-btn" id="close-modal-btn">&times;</button>
+            </div>
+            <form id="guest-form">
+                <input type="hidden" id="guest-id">
+                <div class="form-group">
+                    <label for="guest-name">Nombre Completo</label>
+                    <input type="text" id="guest-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="guest-doc">Cédula / ID</label>
+                    <input type="text" id="guest-doc" required>
+                </div>
+                <div class="form-group">
+                    <label for="guest-phone">Teléfono</label>
+                    <input type="text" id="guest-phone">
+                </div>
+                <div class="form-group">
+                    <label for="guest-origin">Procedencia (Ej. Lara, Cabudare)</label>
+                    <input type="text" id="guest-origin" placeholder="Ciudad o Estado">
+                </div>
+                <div class="form-group" id="status-group-container">
+                    <label for="guest-status">Estado de Asistencia</label>
+                    <select id="guest-status" class="status-select" style="width: 100%; padding: 10px;">
+                        <option value="Ausente">Ausente</option>
+                        <option value="Presente">Presente</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-modal-btn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Eliminación -->
+    <div class="modal" id="delete-modal">
+        <div class="modal-content" style="max-width: 380px;">
+            <div class="modal-header">
+                <h3>Confirmar Eliminación</h3>
+                <button class="close-btn" id="close-delete-modal">&times;</button>
+            </div>
+            <div style="padding: 20px; text-align: center;">
+                <p style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.95rem;">
+                    ¿Estás seguro de que deseas eliminar a <strong id="delete-guest-name" style="color: #fff;"></strong>?
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" id="cancel-delete-btn">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="confirm-delete-btn" style="background-color: #ef4444;">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultado de Escaneo Exitoso -->
+    <div class="modal" id="scan-success-modal">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; background: rgba(52, 211, 153, 0.2); border-bottom: 1px solid #34d399;">
+                <h3 style="color: #34d399;"><i class="fa-solid fa-circle-check"></i> ¡Acceso Concedido!</h3>
+            </div>
+            <div style="padding: 25px;">
+                <h2 id="scan-guest-name" style="font-size: 1.3rem; color: #fff; margin-bottom: 10px;">Nombre del Invitado</h2>
+                <p style="color: var(--text-muted); margin-bottom: 6px;">Cédula: <strong id="scan-guest-doc" style="color: #fff;"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 6px;">Ubicación: <strong id="scan-guest-letter" style="color: #34d399; font-size: 1.1rem;"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Estado: <strong style="color: #34d399;">Presente</strong></p>
+                <button class="btn btn-primary" id="close-scan-modal-btn" style="width: 100%; justify-content: center; background-color: #059669;">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Resultado del Sorteo -->
+    <div class="modal" id="winner-modal">
+        <div class="modal-content winner-modal-content">
+            <div class="modal-header">
+                <h3>🎉 ¡Tenemos un Ganador!</h3>
+                <button class="close-btn" id="close-winner-modal">&times;</button>
+            </div>
+            <div class="winner-body" style="padding: 25px; text-align: center;">
+                <div class="winner-badge-number" id="winner-number" style="font-size: 2.8rem; font-weight: bold; color: #34d399; margin-bottom: 10px;">#0</div>
+                <h2 id="winner-name" style="font-size: 1.4rem; color: #ffffff; margin-bottom: 8px;">Nombre del Ganador</h2>
+                <p style="color: var(--text-muted); margin-bottom: 4px;">Cédula: <strong id="winner-doc" style="color: #fff;"></strong></p>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Procedencia: <strong id="winner-origin" style="color: #fff;"></strong></p>
+                <button class="btn btn-primary" id="accept-winner-btn" style="width: 100%; justify-content: center;">Aceptar</button>
+            </div>
         </div>
     </div>
 
